@@ -1,0 +1,103 @@
+import pandas as pd
+import ipywidgets as widgets
+from IPython.display import display, clear_output
+
+# 初始化課表
+def initialize_timetable():
+    timetable = pd.DataFrame("", index=range(1, 10), columns=["星期一", "星期二", "星期三", "星期四", "星期五", "星期六"])
+    return timetable
+
+# 顯示課表
+def display_timetable(timetable):
+    styled = timetable.style.set_properties(**{
+        'width': '100px',
+        'height': '50px',
+        'white-space': 'pre-wrap',
+        'text-align': 'center'
+    }).set_table_styles([
+        {
+            'selector': 'th',
+            'props': [('border', '1px solid black'), ('padding', '5px')]
+        },
+        {
+            'selector': 'td',
+            'props': [('border', '1px solid black'), ('padding', '5px')]
+        }
+    ])
+    display(styled)
+
+# 輸入課程資料
+def input_course_data(timetable):
+    days = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六"]
+    periods = list(range(1, 10))
+
+    day_selector = widgets.Dropdown(options=days, description='選擇星期:')
+    period_checkboxes = [widgets.Checkbox(value=False, description=str(period)) for period in periods]
+    period_selector = widgets.VBox(period_checkboxes)
+    course_name_input = widgets.Text(description='課程名稱:')
+    course_code_input = widgets.Text(description='課程代碼:')
+    add_button = widgets.Button(description='添加課程')
+    delete_button = widgets.Button(description='刪除課程')
+
+    display(day_selector, period_selector, course_name_input, course_code_input, add_button, delete_button)
+
+    output = widgets.Output()
+    display(output)
+
+    def on_add_button_clicked(b):
+        with output:
+            clear_output()
+            day = day_selector.value
+            periods_selected = [int(cb.description) for cb in period_checkboxes if cb.value]
+            course_name = course_name_input.value
+            course_code = course_code_input.value
+
+            if course_code:
+                course_entry = f"{course_name}（代碼：{course_code}）"
+            else:
+                course_entry = course_name
+
+            for period in periods_selected:
+                if timetable.at[period, day] != "":
+                    timetable.at[period, day] += f"\n{course_entry}"
+                else:
+                    timetable.at[period, day] = course_entry
+
+            display_timetable(timetable)
+
+            for cb in period_checkboxes:
+                cb.value = False
+            course_name_input.value = ""
+            course_code_input.value = ""
+
+    def on_delete_button_clicked(b):
+        with output:
+            clear_output()
+            day = day_selector.value
+            periods_selected = [int(cb.description) for cb in period_checkboxes if cb.value]
+
+            for period in periods_selected:
+                courses = timetable.at[period, day].split("\n")
+                courses_to_delete = [course for course in courses if course_name_input.value in course]
+                for course in courses_to_delete:
+                    courses.remove(course)
+                timetable.at[period, day] = "\n".join(courses).strip()
+
+            display_timetable(timetable)
+
+            for cb in period_checkboxes:
+                cb.value = False
+            course_name_input.value = ""
+            course_code_input.value = ""
+
+    add_button.on_click(on_add_button_clicked)
+    delete_button.on_click(on_delete_button_clicked)
+    return timetable
+
+# 主函數
+def main():
+    timetable = initialize_timetable()
+    input_course_data(timetable)
+
+# 執行主函數
+main()
